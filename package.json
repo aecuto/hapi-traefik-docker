@@ -1,0 +1,16 @@
+{
+  "name": "hapi-traefik",
+  "version": "1.0.0",
+  "main": "index.js",
+  "license": "MIT",
+  "scripts": {
+    "start1": "nodemon ./server.js",
+    "start2": "nodemon ./server2.js"
+  },
+  "dependencies": {
+    "@hapi/hapi": "^20.0.0"
+  },
+  "devDependencies": {
+    "nodemon": "^2.0.4"
+  }
+}

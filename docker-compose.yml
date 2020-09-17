@@ -1,0 +1,86 @@
+version: '3'
+
+services:
+  hapi_api:
+    image: node:14-alpine
+    working_dir: /app
+    volumes:
+      - ./:/app
+    command: ['yarn', 'start1']
+    labels:
+      # Enable traefik
+      - traefik.enable=true
+      # service
+      - traefik.http.services.HAPI-API-service.loadbalancer.server.port=8000
+      # http
+      - traefik.http.routers.HAPI-API.entrypoints=web
+      - traefik.http.routers.HAPI-API.rule=Host(`localhost`) && Path(`/api1`)
+      # - traefik.http.routers.HAPI-API.rule=Host(`pp-a-service1.20scoopscnx.com`)
+      - traefik.http.routers.HAPI-API.middlewares=REWRITE_API1
+      # https
+      - traefik.http.routers.HAPI-API-secured.entrypoints=websecure
+      - traefik.http.routers.HAPI-API-secured.service=HAPI-API-service
+      - traefik.http.routers.HAPI-API-secured.rule=Host(`pp-a-service1.20scoopscnx.com`)  && Path(`/api1`)
+      - traefik.http.routers.HAPI-API-secured.tls.certresolver=letsencrypt
+      - traefik.http.routers.HAPI-API-secured.middlewares=LIMITFILE, REWRITE_API1
+  hapi_api2:
+    image: node:14-alpine
+    working_dir: /app
+    volumes:
+      - ./:/app
+    command: ['yarn', 'start2']
+    labels:
+      # Enable traefik
+      - traefik.enable=true
+      # service
+      - traefik.http.services.HAPI-API2-service.loadbalancer.server.port=8001
+      # http
+      - traefik.http.routers.HAPI-API2.entrypoints=web
+      - traefik.http.routers.HAPI-API2.rule=Host(`localhost`) && Path(`/api2`)
+      # - traefik.http.routers.HAPI-API2.rule=Host(`pp-a-service2.20scoopscnx.com`)
+      - traefik.http.routers.HAPI-API2.middlewares=REWRITE_API2
+      # https
+      - traefik.http.routers.HAPI-API2-secured.entrypoints=websecure
+      - traefik.http.routers.HAPI-API2-secured.service=HAPI-API2-service
+      - traefik.http.routers.HAPI-API2-secured.rule=Host(`pp-a-service1.20scoopscnx.com`) && Path(`/api2`)
+      - traefik.http.routers.HAPI-API2-secured.tls.certresolver=letsencrypt
+      - traefik.http.routers.HAPI-API2-secured.middlewares=LIMITFILE, REWRITE_API2
+  traefik:
+    image: traefik:v2.2
+    command:
+      # Enable Dashboard
+      - --api.insecure=true
+      # Use docker provider
+      - --providers.docker=true
+      - --providers.docker.exposedbydefault=false
+      # entrypoints
+      - --entrypoints.web.address=:80
+      - --entrypoints.websecure.address=:443
+      # - --entrypoints.web.http.redirections.entryPoint.to=websecure
+      # - --entrypoints.web.http.redirections.entryPoint.scheme=https
+      # - --entrypoints.web.http.redirections.entrypoint.permanent=true
+      #certificate
+      - --certificatesresolvers.letsencrypt.acme.httpchallenge=true
+      - --certificatesresolvers.letsencrypt.acme.httpchallenge.entrypoint=web
+      - --certificatesresolvers.letsencrypt.acme.email=kampee.tonoi@20scoops.com
+      - --certificatesresolvers.letsencrypt.acme.storage=/letsencrypt/acme.json
+    ports:
+      - 80:80
+      - 8080:8080
+      #certificate
+      - 443:443
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock:ro
+      #certificate
+      - ./letsencrypt:/letsencrypt
+    labels:
+      # Enable traefik
+      - traefik.enable=true
+      # http
+      - traefik.http.routers.TRAEFIK-DASHBOARD.rule=Host(`dashboard.localhost`)
+      - traefik.http.routers.TRAEFIK-DASHBOARD.entrypoints=web
+      - traefik.http.services.TRAEFIK-DASHBOARD-service.loadbalancer.server.port=8080
+      # middlewares
+      - traefik.http.middlewares.LIMITFILE.buffering.maxRequestBodyBytes=1000000
+      - traefik.http.middlewares.REWRITE_API1.stripprefix.prefixes=/api1
+      - traefik.http.middlewares.REWRITE_API2.stripprefix.prefixes=/api2
